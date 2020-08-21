@@ -27,6 +27,7 @@ import okio.source
 import java.io.*
 import java.nio.ByteBuffer
 import java.util.concurrent.Callable
+import kotlin.jvm.Throws
 
 /**
  * An open helper that will copy & open a pre-populated database if it doesn't exist in internal
