@@ -35,9 +35,7 @@ import java.util.concurrent.Callable
  */
 class SQLiteCopyOpenHelper(
     private val context: Context,
-    private val copyFromAssetPath: String?,
-    private val copyFromFile: File?,
-    private val copyFromInputStream: Callable<InputStream>?,
+    private val copyConfig: CopyConfig,
     private val databaseVersion: Int,
     private val delegate: SupportSQLiteOpenHelper
 ) : SupportSQLiteOpenHelper {
@@ -158,18 +156,15 @@ class SQLiteCopyOpenHelper(
 
     @Throws(IOException::class)
     private fun copyDatabaseFile(destinationFile: File) {
-        val input = when {
-            copyFromAssetPath != null -> {
-                context.assets.open(copyFromAssetPath)
+        val input = when (copyConfig) {
+            is CopyFromAssetPath -> {
+                context.assets.open(copyConfig.path)
             }
-            copyFromFile != null -> {
-                FileInputStream(copyFromFile)
+            is CopyFromFile -> {
+                FileInputStream(copyConfig.file)
             }
-            copyFromInputStream != null -> {
-                copyFromInputStream.call()
-            }
-            else -> {
-                throw IllegalStateException("copyFromAssetPath, copyFromFile, and copyFromInputStream are all null!")
+            is CopyFromInputStream -> {
+                copyConfig.callable.call()
             }
         }
 
@@ -199,17 +194,13 @@ class SQLiteCopyOpenHelper(
      */
     class Factory(
         private val context: Context,
-        private val copyFromAssetPath: String?,
-        private val copyFromFile: File?,
-        private val copyFromInputStream: Callable<InputStream>?,
+        private val copyConfig: CopyConfig,
         private val delegate: SupportSQLiteOpenHelper.Factory
     ) : SupportSQLiteOpenHelper.Factory {
         override fun create(config: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
             return SQLiteCopyOpenHelper(
                 context,
-                copyFromAssetPath,
-                copyFromFile,
-                copyFromInputStream,
+                copyConfig,
                 config.callback.version,
                 delegate.create(config)
             )
@@ -220,3 +211,8 @@ class SQLiteCopyOpenHelper(
         private const val TAG = "SQLiteCopyOpenHelper"
     }
 }
+
+sealed class CopyConfig
+data class CopyFromAssetPath(val path: String): CopyConfig()
+data class CopyFromFile(val file: File): CopyConfig()
+data class CopyFromInputStream(val callable: Callable<InputStream>): CopyConfig()
