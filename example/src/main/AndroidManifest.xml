@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.github.reline.sqlite.db">
+    package="com.github.reline.example">
 
     <application
         android:allowBackup="true"
