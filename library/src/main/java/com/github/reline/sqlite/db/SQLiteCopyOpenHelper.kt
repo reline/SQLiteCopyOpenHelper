@@ -14,173 +14,208 @@
  * limitations under the License.
  */
 
-package com.github.reline.sqlite.db;
+package com.github.reline.sqlite.db
 
-import android.content.Context;
-import android.os.Build;
-import android.util.Log;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
-import androidx.room.DatabaseConfiguration;
-import androidx.room.Room;
-import androidx.room.util.CopyLock;
-import androidx.room.util.DBUtil;
-import androidx.room.util.FileUtil;
-import androidx.sqlite.db.SupportSQLiteDatabase;
-import androidx.sqlite.db.SupportSQLiteOpenHelper;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
+import android.content.Context
+import android.util.Log
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import okio.IOException
+import okio.buffer
+import okio.sink
+import okio.source
+import java.io.*
+import java.nio.ByteBuffer
+import java.util.concurrent.Callable
 
 /**
  * An open helper that will copy & open a pre-populated database if it doesn't exists in internal
  * storage.
  */
-class SQLiteCopyOpenHelper implements SupportSQLiteOpenHelper {
-    @NonNull
-    private final Context mContext;
-    @Nullable
-    private final String mCopyFromAssetPath;
-    @Nullable
-    private final File mCopyFromFile;
-    private final int mDatabaseVersion;
-    @NonNull
-    private final SupportSQLiteOpenHelper mDelegate;
-    @Nullable
-    private DatabaseConfiguration mDatabaseConfiguration;
-    private boolean mVerified;
-    SQLiteCopyOpenHelper(
-            @NonNull Context context,
-            @Nullable String copyFromAssetPath,
-            @Nullable File copyFromFile,
-            int databaseVersion,
-            @NonNull SupportSQLiteOpenHelper supportSQLiteOpenHelper) {
-        mContext = context;
-        mCopyFromAssetPath = copyFromAssetPath;
-        mCopyFromFile = copyFromFile;
-        mDatabaseVersion = databaseVersion;
-        mDelegate = supportSQLiteOpenHelper;
+class SQLiteCopyOpenHelper(
+    private val context: Context,
+    private val copyFromAssetPath: String?,
+    private val copyFromFile: File?,
+    private val copyFromInputStream: Callable<InputStream>?,
+    private val databaseVersion: Int,
+    private val delegate: SupportSQLiteOpenHelper
+) : SupportSQLiteOpenHelper {
+
+    private var verified = false
+
+    override fun getDatabaseName(): String? {
+        return delegate.databaseName
     }
-    @Override
-    public String getDatabaseName() {
-        return mDelegate.getDatabaseName();
+
+    override fun setWriteAheadLoggingEnabled(enabled: Boolean) {
+        delegate.setWriteAheadLoggingEnabled(enabled)
     }
-    @Override
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
-    public void setWriteAheadLoggingEnabled(boolean enabled) {
-        mDelegate.setWriteAheadLoggingEnabled(enabled);
-    }
-    @Override
-    public synchronized SupportSQLiteDatabase getWritableDatabase() {
-        if (!mVerified) {
-            verifyDatabaseFile();
-            mVerified = true;
+
+    @Synchronized
+    override fun getWritableDatabase(): SupportSQLiteDatabase {
+        if (!verified) {
+            verifyDatabaseFile()
+            verified = true
         }
-        return mDelegate.getWritableDatabase();
+        return delegate.writableDatabase
     }
-    @Override
-    public synchronized SupportSQLiteDatabase getReadableDatabase() {
-        if (!mVerified) {
-            verifyDatabaseFile();
-            mVerified = true;
+
+    @Synchronized
+    override fun getReadableDatabase(): SupportSQLiteDatabase {
+        if (!verified) {
+            verifyDatabaseFile()
+            verified = true
         }
-        return mDelegate.getReadableDatabase();
+        return delegate.readableDatabase
     }
-    @Override
-    public synchronized void close() {
-        mDelegate.close();
-        mVerified = false;
+
+    @Synchronized
+    override fun close() {
+        delegate.close()
+        verified = false
     }
-    // Can't be constructor param because the factory is needed by the database builder which in
-    // turn is the one that actually builds the configuration.
-    void setDatabaseConfiguration(@Nullable DatabaseConfiguration databaseConfiguration) {
-        mDatabaseConfiguration = databaseConfiguration;
-    }
-    private void verifyDatabaseFile() {
-        String databaseName = getDatabaseName();
-        File databaseFile = mContext.getDatabasePath(databaseName);
-        boolean processLevelLock = mDatabaseConfiguration == null
-                || mDatabaseConfiguration.multiInstanceInvalidation;
-        CopyLock copyLock = new CopyLock(databaseName, mContext.getFilesDir(), processLevelLock);
+
+    private fun verifyDatabaseFile() {
+        val databaseName = databaseName
+        val databaseFile = context.getDatabasePath(databaseName)
+        val lockChannel =
+            FileOutputStream(File(databaseName, context.filesDir.toString() + ".lck")).channel
         try {
-            // Acquire a copy lock, this lock works across threads and processes, preventing
+            // Acquire a file lock, this lock works across threads and processes, preventing
             // concurrent copy attempts from occurring.
-            copyLock.lock();
+            lockChannel.tryLock()
+
             if (!databaseFile.exists()) {
                 try {
                     // No database file found, copy and be done.
-                    copyDatabaseFile(databaseFile);
-                    return;
-                } catch (IOException e) {
-                    throw new RuntimeException("Unable to copy database file.", e);
+                    copyDatabaseFile(databaseFile)
+                    return
+                } catch (e: IOException) {
+                    throw RuntimeException("Unable to copy database file.", e)
                 }
             }
-            if (mDatabaseConfiguration == null) {
-                return;
-            }
+
             // A database file is present, check if we need to re-copy it.
-            int currentVersion;
-            try {
-                currentVersion = DBUtil.readVersion(databaseFile);
-            } catch (IOException e) {
-                Log.w(Room.LOG_TAG, "Unable to read database version.", e);
-                return;
+            val currentVersion = try {
+                readVersion(databaseFile)
+            } catch (e: IOException) {
+                Log.w(TAG, "Unable to read database version.", e)
+                return
             }
-            if (currentVersion == mDatabaseVersion) {
-                return;
+
+            if (currentVersion == databaseVersion) {
+                return
             }
-            if (mDatabaseConfiguration.isMigrationRequired(currentVersion, mDatabaseVersion)) {
-                // From the current version to the desired version a migration is required, i.e.
-                // we won't be performing a copy destructive migration.
-                return;
-            }
-            if (mContext.deleteDatabase(databaseName)) {
+
+            // Always overwrite, we don't support migrations
+            if (context.deleteDatabase(databaseName)) {
                 try {
-                    copyDatabaseFile(databaseFile);
-                } catch (IOException e) {
+                    copyDatabaseFile(databaseFile)
+                } catch (e: IOException) {
                     // We are more forgiving copying a database on a destructive migration since
                     // there is already a database file that can be opened.
-                    Log.w(Room.LOG_TAG, "Unable to copy database file.", e);
+                    Log.w(TAG, "Unable to copy database file.", e)
                 }
             } else {
-                Log.w(Room.LOG_TAG, "Failed to delete database file ("
-                        + databaseName + ") for a copy destructive migration.");
+                Log.w(
+                    TAG,
+                    "Failed to delete database file ($databaseName) for a copy destructive migration."
+                )
             }
         } finally {
-            copyLock.unlock();
+            try {
+                lockChannel.close()
+            } catch (ignored: IOException) {}
         }
     }
-    private void copyDatabaseFile(File destinationFile) throws IOException {
-        ReadableByteChannel input;
-        if (mCopyFromAssetPath != null) {
-            input = Channels.newChannel(mContext.getAssets().open(mCopyFromAssetPath));
-        } else if (mCopyFromFile != null) {
-            input = new FileInputStream(mCopyFromFile).getChannel();
-        } else {
-            throw new IllegalStateException("copyFromAssetPath and copyFromFile == null!");
+
+    /**
+     * Reads the user version number out of the database header from the given file.
+     *
+     * @param databaseFile the database file.
+     * @return the database version
+     * @throws IOException if something goes wrong reading the file, such as bad database header or
+     * missing permissions.
+     *
+     * @see <a href="https://www.sqlite.org/fileformat.html#user_version_number">User Version
+     * Number</a>.
+     */
+    @Throws(IOException::class)
+    private fun readVersion(databaseFile: File): Int {
+        return FileInputStream(databaseFile).channel.use { input ->
+            input.tryLock(60, 4, true)
+            input.position(60)
+            val buffer = ByteBuffer.allocate(4)
+            val read = input.read(buffer)
+            if (read != 4) {
+                throw IOException("Bad database header, unable to read 4 bytes at offset 60")
+            }
+            buffer.rewind()
+            buffer.int // ByteBuffer is big-endian by default
         }
+    }
+
+    @Throws(IOException::class)
+    private fun copyDatabaseFile(destinationFile: File) {
+        val input = when {
+            copyFromAssetPath != null -> {
+                context.assets.open(copyFromAssetPath)
+            }
+            copyFromFile != null -> {
+                FileInputStream(copyFromFile)
+            }
+            copyFromInputStream != null -> {
+                copyFromInputStream.call()
+            }
+            else -> {
+                throw IllegalStateException("copyFromAssetPath, copyFromFile, and copyFromInputStream are all null!")
+            }
+        }
+
         // An intermediate file is used so that we never end up with a half-copied database file
         // in the internal directory.
-        File intermediateFile = File.createTempFile(
-                "room-copy-helper", ".tmp", mContext.getCacheDir());
-        intermediateFile.deleteOnExit();
-        FileChannel output = new FileOutputStream(intermediateFile).getChannel();
-        FileUtil.copy(input, output);
-        File parent = destinationFile.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IOException("Failed to create directories for "
-                    + destinationFile.getAbsolutePath());
+        val intermediateFile = File.createTempFile(
+            "sqlite-copy-helper", ".tmp", context.cacheDir
+        )
+        intermediateFile.deleteOnExit()
+        input.source().use { a ->
+            intermediateFile.sink().buffer().use { b -> b.writeAll(a) }
         }
+
+        val parent = destinationFile.parentFile
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            throw IOException("Failed to create directories for ${destinationFile.absolutePath}")
+        }
+
         if (!intermediateFile.renameTo(destinationFile)) {
-            throw new IOException("Failed to move intermediate file ("
-                    + intermediateFile.getAbsolutePath() + ") to destination ("
-                    + destinationFile.getAbsolutePath() + ").");
+            throw IOException("Failed to move intermediate file (${intermediateFile.absolutePath}) to destination (${destinationFile.absolutePath}).")
         }
     }
-}
 
+    /**
+     * Implementation of {@link SupportSQLiteOpenHelper.Factory} that creates
+     * {@link SQLiteCopyOpenHelper}.
+     */
+    class Factory(
+        private val context: Context,
+        private val copyFromAssetPath: String?,
+        private val copyFromFile: File?,
+        private val copyFromInputStream: Callable<InputStream>?,
+        private val delegate: SupportSQLiteOpenHelper.Factory
+    ) : SupportSQLiteOpenHelper.Factory {
+        override fun create(config: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
+            return SQLiteCopyOpenHelper(
+                context,
+                copyFromAssetPath,
+                copyFromFile,
+                copyFromInputStream,
+                config.callback.version,
+                delegate.create(config)
+            )
+        }
+    }
+
+    companion object {
+        private const val TAG = "SQLiteCopyOpenHelper"
+    }
+}
