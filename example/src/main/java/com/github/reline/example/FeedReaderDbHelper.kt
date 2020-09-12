@@ -4,6 +4,7 @@ import android.content.Context
 import android.provider.BaseColumns
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import com.github.reline.sqlite.db.CopyFromAssetPath
 import com.github.reline.sqlite.db.SQLiteCopyOpenHelper
 import net.sqlcipher.database.SupportFactory
@@ -42,14 +43,13 @@ fun provideFeedReaderConfig(context: Context): SupportSQLiteOpenHelper.Configura
 
 fun provideFactory(): SupportSQLiteOpenHelper.Factory {
     return provideCipherFactory()
-    // return provideDefaultFactory()
+    // or use the built-in android framework factory for an unencrypted database
+//    return provideDefaultFactory()
 }
 
-// todo
-//import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
-//fun provideDefaultFactory(): SupportSQLiteOpenHelper.Factory {
-//    return FrameworkSQLiteOpenHelperFactory()
-//}
+fun provideDefaultFactory(): SupportSQLiteOpenHelper.Factory {
+    return FrameworkSQLiteOpenHelperFactory()
+}
 
 fun provideCipherFactory(): SupportFactory {
     return SupportFactory("password".toByteArray())
