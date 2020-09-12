@@ -4,6 +4,8 @@ import android.content.Context
 import android.provider.BaseColumns
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
+import com.github.reline.sqlite.db.CopyFromAssetPath
+import com.github.reline.sqlite.db.SQLiteCopyOpenHelper
 import net.sqlcipher.database.SupportFactory
 
 object FeedReaderContract {
@@ -23,18 +25,42 @@ private const val SQL_CREATE_ENTRIES =
 
 private const val SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS ${FeedReaderContract.FeedEntry.TABLE_NAME}"
 
-class FeedReaderDbFactory(
-    private val context: Context,
-    private val password: ByteArray
-) {
-    fun create(): SupportSQLiteOpenHelper {
-        val config = SupportSQLiteOpenHelper.Configuration.builder(context)
-            .callback(FeedReaderDbHelperCallback(FeedReaderDbHelperCallback.DATABASE_VERSION))
-            .name(FeedReaderDbHelperCallback.DATABASE_NAME)
-            .build()
+fun provideDao(database: SupportSQLiteDatabase): FeedDao {
+    return FeedDao(database)
+}
 
-        return SupportFactory(password).create(config)
-    }
+fun provideDatabase(factory: SupportSQLiteOpenHelper.Factory, config: SupportSQLiteOpenHelper.Configuration): SupportSQLiteDatabase {
+    return factory.create(config).writableDatabase
+}
+
+fun provideFeedReaderConfig(context: Context): SupportSQLiteOpenHelper.Configuration {
+    return SupportSQLiteOpenHelper.Configuration.builder(context)
+        .callback(FeedReaderDbHelperCallback(FeedReaderDbHelperCallback.DATABASE_VERSION))
+        .name(FeedReaderDbHelperCallback.DATABASE_NAME)
+        .build()
+}
+
+fun provideFactory(): SupportSQLiteOpenHelper.Factory {
+    return provideCipherFactory()
+    // return provideDefaultFactory()
+}
+
+// todo
+//import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+//fun provideDefaultFactory(): SupportSQLiteOpenHelper.Factory {
+//    return FrameworkSQLiteOpenHelperFactory()
+//}
+
+fun provideCipherFactory(): SupportFactory {
+    return SupportFactory("password".toByteArray())
+}
+
+fun provideCopyFactory(context: Context, factory: SupportSQLiteOpenHelper.Factory): SQLiteCopyOpenHelper.Factory {
+    return SQLiteCopyOpenHelper.Factory(
+        context,
+        CopyFromAssetPath("FeedReader.db"),
+        factory
+    )
 }
 
 class FeedReaderDbHelperCallback(version: Int) : SupportSQLiteOpenHelper.Callback(version) {
