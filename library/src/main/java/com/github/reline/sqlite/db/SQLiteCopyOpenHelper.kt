@@ -81,7 +81,7 @@ class SQLiteCopyOpenHelper(
         val databaseName = databaseName
         val databaseFile = context.getDatabasePath(databaseName)
         val lockChannel =
-            FileOutputStream(File(databaseName, context.filesDir.toString() + ".lck")).channel
+            FileOutputStream(File(context.filesDir, "$databaseName.lck")).channel
         try {
             // Acquire a file lock, this lock works across threads and processes, preventing
             // concurrent copy attempts from occurring.
