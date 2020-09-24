@@ -42,9 +42,12 @@ fun provideFeedReaderConfig(context: Context): SupportSQLiteOpenHelper.Configura
 }
 
 fun provideFactory(): SupportSQLiteOpenHelper.Factory {
-    return provideCipherFactory()
-    // or use the built-in android framework factory for an unencrypted database
-//    return provideDefaultFactory()
+    return if (BuildConfig.DEBUG) {
+        // use the built-in android framework factory for an unencrypted database during development
+        provideDefaultFactory()
+    } else {
+        provideCipherFactory()
+    }
 }
 
 fun provideDefaultFactory(): SupportSQLiteOpenHelper.Factory {
