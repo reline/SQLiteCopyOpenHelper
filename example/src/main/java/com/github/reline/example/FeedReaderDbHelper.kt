@@ -26,12 +26,12 @@ private const val SQL_CREATE_ENTRIES =
 
 private const val SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS ${FeedReaderContract.FeedEntry.TABLE_NAME}"
 
-fun provideDao(database: SupportSQLiteDatabase): FeedDao {
-    return FeedDao(database)
+fun provideDao(helper: SupportSQLiteOpenHelper): FeedDao {
+    return FeedDao(helper)
 }
 
-fun provideDatabase(factory: SupportSQLiteOpenHelper.Factory, config: SupportSQLiteOpenHelper.Configuration): SupportSQLiteDatabase {
-    return factory.create(config).writableDatabase
+fun provideHelper(factory: SupportSQLiteOpenHelper.Factory, config: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
+    return factory.create(config)
 }
 
 fun provideFeedReaderConfig(context: Context): SupportSQLiteOpenHelper.Configuration {

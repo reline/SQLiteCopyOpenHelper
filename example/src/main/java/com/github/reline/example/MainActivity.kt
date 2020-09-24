@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity() {
 
         val factory = provideCopyFactory(applicationContext, provideFactory())
         val config = provideFeedReaderConfig(applicationContext)
-        val database = provideDatabase(factory, config)
+        val database = provideHelper(factory, config)
         dao = provideDao(database)
     }
 
