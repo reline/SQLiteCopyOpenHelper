@@ -6,6 +6,7 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 import org.junit.runner.RunWith
@@ -23,6 +24,37 @@ class SQLiteCopyOpenHelperTest {
             .create(config)
             .writableDatabase
             .close()
+    }
+
+    @Test
+    fun destructivelyMigrate() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name("1.db")
+
+        SQLiteCopyOpenHelper.Factory(context, CopyFromAssetPath("1.db"), FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(TestCallback(1)).build())
+            .readableDatabase.use { db ->
+                assertEquals(1, db.version)
+                db.beginTransaction()
+                val cursor = db.query("""SELECT value FROM Test LIMIT 1""")
+                cursor.moveToFirst()
+                val value = cursor.getInt(0)
+                assertEquals(1, value)
+                db.endTransaction()
+            }
+
+        SQLiteCopyOpenHelper.Factory(context, CopyFromAssetPath("2.db"), FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(TestCallback(2)).build())
+            .readableDatabase.use { db ->
+                assertEquals(2, db.version)
+                db.beginTransaction()
+                val cursor = db.query("""SELECT value FROM Test LIMIT 1""")
+                cursor.moveToFirst()
+                val value = cursor.getInt(0)
+                assertEquals(2, value)
+                db.endTransaction()
+            }
     }
 }
 
