@@ -1,6 +1,11 @@
 # SQLiteCopyOpenHelper
 An open helper for Android that will copy &amp; open a pre-populated database
 
+## Room
+
+If you are using Room, utilize the built in methods for prepopulating a database.
+https://developer.android.com/training/data-storage/room/prepopulate
+
 License
 --------
 
