@@ -17,6 +17,8 @@
 package com.github.reline.sqlite.db
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.os.Build
 import android.util.Log
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
@@ -24,10 +26,12 @@ import okio.IOException
 import okio.buffer
 import okio.sink
 import okio.source
-import java.io.*
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.Callable
-import kotlin.jvm.Throws
 
 /**
  * An open helper that will copy & open a pre-populated database if it doesn't exist in internal
@@ -40,7 +44,8 @@ class SQLiteCopyOpenHelper(
     private val context: Context,
     private val copyConfig: CopyConfig,
     private val databaseVersion: Int,
-    private val delegate: SupportSQLiteOpenHelper
+    private val delegate: SupportSQLiteOpenHelper,
+    private val databaseFileDelegate: DatabaseFileDelegate = DatabaseFileDelegate(context),
 ) : SupportSQLiteOpenHelper {
 
     private var verified = false
@@ -79,7 +84,7 @@ class SQLiteCopyOpenHelper(
 
     private fun verifyDatabaseFile() {
         val databaseName = databaseName
-        val databaseFile = context.getDatabasePath(databaseName)
+        val databaseFile = databaseFileDelegate.getDatabaseFile(databaseName)
         val lockChannel =
             FileOutputStream(File(context.filesDir, "$databaseName.lck")).channel
         try {
@@ -110,7 +115,7 @@ class SQLiteCopyOpenHelper(
             }
 
             // Always overwrite, we don't support migrations
-            if (context.deleteDatabase(databaseName)) {
+            if (SQLiteDatabase.deleteDatabase(databaseFileDelegate.getDatabaseFile(databaseName))) {
                 try {
                     copyDatabaseFile(databaseFile)
                 } catch (e: IOException) {
@@ -127,7 +132,8 @@ class SQLiteCopyOpenHelper(
         } finally {
             try {
                 lockChannel.close()
-            } catch (ignored: IOException) {}
+            } catch (ignored: IOException) {
+            }
         }
     }
 
@@ -198,14 +204,15 @@ class SQLiteCopyOpenHelper(
     class Factory(
         private val context: Context,
         private val copyConfig: CopyConfig,
-        private val delegate: SupportSQLiteOpenHelper.Factory
+        private val delegate: SupportSQLiteOpenHelper.Factory,
     ) : SupportSQLiteOpenHelper.Factory {
         override fun create(config: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
             return SQLiteCopyOpenHelper(
                 context,
                 copyConfig,
                 config.callback.version,
-                delegate.create(config)
+                delegate.create(config),
+                DatabaseFileDelegate(context, config.useNoBackupDirectory),
             )
         }
     }
@@ -215,7 +222,21 @@ class SQLiteCopyOpenHelper(
     }
 }
 
+class DatabaseFileDelegate(
+    private val context: Context,
+    private val useNoBackupDirectory: Boolean = false,
+) {
+
+    fun getDatabaseFile(databaseName: String?): File {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && databaseName != null && useNoBackupDirectory) {
+            File(context.noBackupFilesDir, databaseName)
+        } else {
+            context.getDatabasePath(databaseName)
+        }
+    }
+}
+
 sealed class CopyConfig
-data class CopyFromAssetPath(val path: String): CopyConfig()
-data class CopyFromFile(val file: File): CopyConfig()
-data class CopyFromInputStream(val callable: Callable<InputStream>): CopyConfig()
+data class CopyFromAssetPath(val path: String) : CopyConfig()
+data class CopyFromFile(val file: File) : CopyConfig()
+data class CopyFromInputStream(val callable: Callable<InputStream>) : CopyConfig()

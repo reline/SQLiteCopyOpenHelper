@@ -36,8 +36,18 @@ class SQLiteCopyOpenHelperTest {
 
     @Test
     fun destructivelyMigrate() {
+        destructivelyMigrate(false)
+    }
+
+    @Test
+    fun destructivelyMigrateNoBackup() {
+        destructivelyMigrate(true)
+    }
+
+    private fun destructivelyMigrate(noBackupDirectory: Boolean) {
         val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
             .name("1.db")
+            .noBackupDirectory(noBackupDirectory)
 
         SQLiteCopyOpenHelper.Factory(context, CopyFromAssetPath("1.db"), FrameworkSQLiteOpenHelperFactory())
             .create(configBuilder.callback(TestCallback(1)).build())
