@@ -16,7 +16,7 @@ dependencies {
 }
 ```
 
-### Copying from Assets folder
+### Prepopulate from an app asset
 
 Copy your database file to the assets folder.
 ```
@@ -24,33 +24,51 @@ src/main/java/...
 src/main/assets/database.sqlite
 ```
 
-Then use the `CopyFromAssetPath` configuration to specify the path to your database.
+Then use the `CopySource.FromAssetPath` configuration to specify the path to your database.
 ```kotlin
+val source = CopySource.FromAssetPath("database.sqlite")
+val migrationStrategy = ..
 val factory: SupportSQLiteOpenHelper.Factory = SQLiteCopyOpenHelper.Factory(
-        context = applicationContext,
         delegate = FrameworkSQLiteOpenHelperFactory(),
-        copyConfig = CopyFromAssetPath("database.sqlite")
+        copyConfig = CopyConfig(source, migrationStrategy),
 )
 ```
 
-### Copying from other sources
+### Prepopulate from other sources
 
 ```kotlin
-copyConfig = CopyFromFile(file = File(...))
+val source = CopySource.FromFile(File(..))
 ...
-copyConfig = CopyFromInputStream { inputStream }
+val source = CopySource.FromInputStream { inputStream }
+```
+
+### Handle migrations that include prepackaged databases
+
+The default migration strategy is `Destructive` for prepackaged databases, meaning when the database
+version on the device does not match the latest schema version, the database tables will be
+recreated.
+
+If valid migrations are necessary between versions then the `Required` strategy can also be used, or
+`DestructiveOnDowngrade` if the database does not support downgrades.
+
+Destructive migrations can be enabled for only a set of specific starting schema versions as well.
+```kt
+val migrationStrategy = MigrationStrategy.DestructiveFrom(setOf(
+    1, 2, 3, // the first migration only supports version 4 -> 5 
+))
 ```
 
 ### SQLDelight
 
-The driver for SQLDelight accepts a SupportSQLiteOpenHelper.Factory, so simply pass in the SQLiteCopyOpenHelper.Factory.
+The `AndroidSqliteDriver` for SQLDelight accepts a `SupportSQLiteOpenHelper.Factory`, so simply pass
+in a `SQLiteCopyOpenHelper.Factory`.
 ```kotlin
-val factory: SupportSQLiteOpenHelper.Factory = SQLiteCopyOpenHelper.Factory(...)
+val factory: SupportSQLiteOpenHelper.Factory = SQLiteCopyOpenHelper.Factory(..)
 val driver: SqlDriver = AndroidSqliteDriver(
         context = applicationContext,
         schema = Database.Schema,
         factory = factory,
-        name = "database.db"
+        name = "database.db",
 )
 val database = Database(driver)
 ```
