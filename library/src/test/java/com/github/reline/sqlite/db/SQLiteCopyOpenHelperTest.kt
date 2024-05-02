@@ -11,15 +11,18 @@ import org.junit.Before
 import org.junit.Test
 
 import org.junit.runner.RunWith
+import timber.log.Timber
 
 @RunWith(AndroidJUnit4::class)
-class SQLiteCopyOpenHelperTest {
+class SQLiteCopyOpenHelperRobolectricTest {
 
     private lateinit var context: Context
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
+        // todo: watch out for that tree
+        Timber.plant(Timber.DebugTree())
     }
 
     @Test

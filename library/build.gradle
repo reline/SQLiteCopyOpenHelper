@@ -1,13 +1,15 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
+plugins {
+    id("com.android.library") version "8.3.0"
+    id("org.jetbrains.kotlin.android") version "1.9.23"
+}
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.2"
+    namespace "com.github.reline.sqlite.db"
+    compileSdk 34
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 30
+        targetSdkVersion 34
         versionCode 1
         versionName "0.1.0"
 
@@ -22,6 +24,15 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility 1.8
+        targetCompatibility 1.8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
     testOptions {
         unitTests {
             includeAndroidResources = true
@@ -30,13 +41,17 @@ android {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation "com.squareup.okio:okio:2.6.0"
-    implementation "androidx.sqlite:sqlite-ktx:$sqlite_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.23"
+    implementation "com.squareup.okio:okio:3.9.0"
+    implementation "com.squareup.okio:okio-assetfilesystem:3.9.0"
+    implementation "androidx.sqlite:sqlite-ktx:2.1.0"
+    implementation "com.jakewharton.timber:timber:4.7.1"
 
-    testImplementation "androidx.test.ext:junit-ktx:1.1.2"
-    testImplementation "androidx.test:core-ktx:1.3.0"
-    testImplementation 'org.robolectric:robolectric:4.3'
-    testImplementation "androidx.sqlite:sqlite-framework:$sqlite_version"
-    testImplementation 'junit:junit:4.12'
+    testImplementation "com.squareup.okio:okio-fakefilesystem:3.9.0"
+    testImplementation "io.mockk:mockk:1.13.10"
+    testImplementation "androidx.test.ext:junit-ktx:1.1.5"
+    testImplementation "androidx.test:core-ktx:1.5.0"
+    testImplementation 'org.robolectric:robolectric:4.12'
+    testImplementation "androidx.sqlite:sqlite-framework:2.1.0"
+    testImplementation 'junit:junit:4.13.2'
 }
