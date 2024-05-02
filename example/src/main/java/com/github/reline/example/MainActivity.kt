@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val factory = provideCopyFactory(applicationContext, provideFactory())
+        val factory = provideCopyFactory(provideFactory())
         val config = provideFeedReaderConfig(applicationContext)
         val database = provideHelper(factory, config)
         dao = provideDao(database)

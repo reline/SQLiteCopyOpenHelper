@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.sqlite.db.transaction
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -25,54 +26,163 @@ class SQLiteCopyOpenHelperTest {
     @Test
     fun copyEmptyDatabaseFileFromAssetPath() {
         val config = SupportSQLiteOpenHelper.Configuration.builder(context)
-            .callback(TestCallback())
-            .name("empty.db")
+            .callback(TestCallback(1))
+            .name("database.sqlite")
             .build()
-        SQLiteCopyOpenHelper.Factory(context, CopyFromAssetPath("EmptyDatabaseFile.db"), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite")), FrameworkSQLiteOpenHelperFactory())
             .create(config)
             .writableDatabase
             .close()
     }
 
     @Test
-    fun destructivelyMigrate() {
+    fun destructivelyMigrateByDefault() {
         val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
-            .name("1.db")
+            .name("database.sqlite")
 
-        SQLiteCopyOpenHelper.Factory(context, CopyFromAssetPath("1.db"), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("1.sqlite")), FrameworkSQLiteOpenHelperFactory())
             .create(configBuilder.callback(TestCallback(1)).build())
             .readableDatabase.use { db ->
                 assertEquals(1, db.version)
-                db.beginTransaction()
-                val value = db.query("""SELECT value FROM Test LIMIT 1""").use { cursor ->
-                    cursor.moveToFirst()
-                    cursor.getInt(0)
-                }
+                val value = db.getValue()
                 assertEquals(1, value)
-                db.endTransaction()
             }
 
-        SQLiteCopyOpenHelper.Factory(context, CopyFromAssetPath("2.db"), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("2.sqlite")), FrameworkSQLiteOpenHelperFactory())
             .create(configBuilder.callback(TestCallback(2)).build())
             .readableDatabase.use { db ->
                 assertEquals(2, db.version)
-                db.beginTransaction()
-                val value = db.query("""SELECT value FROM Test LIMIT 1""").use { cursor ->
-                    cursor.moveToFirst()
-                    cursor.getInt(0)
-                }
+                val value = db.getValue()
                 assertEquals(2, value)
-                db.endTransaction()
+            }
+    }
+
+    @Test
+    fun nonDestructiveMigration() {
+        val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name("database.sqlite")
+
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("1.sqlite"), MigrationStrategy.Required), FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(TestCallback(1)).build())
+            .readableDatabase.use { db ->
+                assertEquals(1, db.version)
+                val value = db.getValue()
+                assertEquals(1, value)
+            }
+
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("2.sqlite"), MigrationStrategy.Required), FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(TestCallback(2)).build())
+            .readableDatabase.use { db ->
+                assertEquals(2, db.version)
+                val value = db.getValue()
+                assertEquals(1, value)
+            }
+
+        val callback = object : TestCallback(3) {
+            override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                db.transaction {
+                    db.execSQL("""UPDATE Test SET value = 3;""")
+                }
+            }
+        }
+        val copyConfig = CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"), MigrationStrategy.Required)
+        SQLiteCopyOpenHelper.Factory(copyConfig, FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(callback).build())
+            .readableDatabase.use { db ->
+                assertEquals(3, db.version)
+                val value = db.getValue()
+                assertEquals(3, value)
+            }
+    }
+
+    @Test
+    fun destructiveOnDowngradeOnly() {
+        val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name("database.sqlite")
+
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("2.sqlite"), MigrationStrategy.DestructiveOnDowngrade), FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(TestCallback(2)).build())
+            .readableDatabase.use { db ->
+                assertEquals(2, db.version)
+                val value = db.getValue()
+                assertEquals(2, value)
+            }
+
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("1.sqlite"), MigrationStrategy.DestructiveOnDowngrade), FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(TestCallback(1)).build())
+            .readableDatabase.use { db ->
+                assertEquals(1, db.version)
+                val value = db.getValue()
+                assertEquals(1, value)
+            }
+
+        val callback = object : TestCallback(3) {
+            override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                db.transaction {
+                    db.execSQL("""UPDATE Test SET value = 3;""")
+                }
+            }
+        }
+        val copyConfig = CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"), MigrationStrategy.DestructiveOnDowngrade)
+        SQLiteCopyOpenHelper.Factory(copyConfig, FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(callback).build())
+            .readableDatabase.use { db ->
+                assertEquals(3, db.version)
+                val value = db.getValue()
+                assertEquals(3, value)
+            }
+    }
+
+    @Test
+    fun destructiveMigrationFromSpecificVersions() {
+        val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name("database.sqlite")
+
+        val migrationStrategy = MigrationStrategy.DestructiveFrom(setOf(1))
+
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("1.sqlite"), migrationStrategy), FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(TestCallback(1)).build())
+            .readableDatabase.use { db ->
+                assertEquals(1, db.version)
+                val value = db.getValue()
+                assertEquals(1, value)
+            }
+
+        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("2.sqlite"), migrationStrategy), FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(TestCallback(2)).build())
+            .readableDatabase.use { db ->
+                assertEquals(2, db.version)
+                val value = db.getValue()
+                assertEquals(2, value)
+            }
+
+        val callback = object : TestCallback(3) {
+            override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                db.transaction {
+                    db.execSQL("""UPDATE Test SET value = 3;""")
+                }
+            }
+        }
+        val copyConfig = CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"), migrationStrategy)
+        SQLiteCopyOpenHelper.Factory(copyConfig, FrameworkSQLiteOpenHelperFactory())
+            .create(configBuilder.callback(callback).build())
+            .readableDatabase.use { db ->
+                assertEquals(3, db.version)
+                val value = db.getValue()
+                assertEquals(3, value)
             }
     }
 }
 
-private class TestCallback(version: Int = 1) : SupportSQLiteOpenHelper.Callback(version) {
-    override fun onCreate(db: SupportSQLiteDatabase) {
-        // TODO("Not yet implemented")
+private fun SupportSQLiteDatabase.getValue(): Int = transaction {
+    query("""SELECT value FROM Test LIMIT 1""").use { cursor ->
+        cursor.moveToFirst()
+        cursor.getInt(0)
     }
+}
 
-    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // TODO("Not yet implemented")
-    }
+private open class TestCallback(version: Int) : SupportSQLiteOpenHelper.Callback(version) {
+    override fun onCreate(db: SupportSQLiteDatabase) {}
+    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+    override fun onDowngrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
 }

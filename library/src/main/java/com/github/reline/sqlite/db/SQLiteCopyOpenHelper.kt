@@ -24,26 +24,31 @@ import okio.IOException
 import okio.buffer
 import okio.sink
 import okio.source
-import java.io.*
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.nio.ByteBuffer
-import java.util.concurrent.Callable
-import kotlin.jvm.Throws
 
 /**
  * An open helper that will copy & open a pre-populated database if it doesn't exist in internal
- * storage. Only destructive migrations are supported, so it is highly suggested to use this as a
+ * storage.
+ *
+ * Only destructive migrations are supported, so it is highly suggested to use this as a
  * read-only database.
  *
- * https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-master-release/room/runtime/src/main/java/androidx/room/SQLiteCopyOpenHelper.java
+ * @see <a href="https://android.googlesource.com/platform/frameworks/support/+/refs/heads/androidx-master-release/room/runtime/src/main/java/androidx/room/SQLiteCopyOpenHelper.java">androidx.room.SQLiteCopyOpenHelper</a>
  */
 class SQLiteCopyOpenHelper(
     private val context: Context,
     private val copyConfig: CopyConfig,
     private val databaseVersion: Int,
-    private val delegate: SupportSQLiteOpenHelper
+    private val delegate: SupportSQLiteOpenHelper,
 ) : SupportSQLiteOpenHelper {
 
     private var verified = false
+
+    private val copySource = copyConfig.copySource
+    private val migrationConfiguration = copyConfig.migrationStrategy
 
     override fun getDatabaseName(): String? {
         return delegate.databaseName
@@ -109,7 +114,16 @@ class SQLiteCopyOpenHelper(
                 return
             }
 
-            // Always overwrite, we don't support migrations
+            val isMigrationRequired = migrationConfiguration.isMigrationRequired(
+                fromVersion = currentVersion,
+                toVersion = databaseVersion,
+            )
+            if (isMigrationRequired) {
+                // From the current version to the desired version a migration is required, i.e.
+                // we won't be performing a copy destructive migration.
+                return
+            }
+
             if (context.deleteDatabase(databaseName)) {
                 try {
                     copyDatabaseFile(databaseFile)
@@ -159,15 +173,15 @@ class SQLiteCopyOpenHelper(
 
     @Throws(IOException::class)
     private fun copyDatabaseFile(destinationFile: File) {
-        val input = when (copyConfig) {
-            is CopyFromAssetPath -> {
-                context.assets.open(copyConfig.path)
+        val input = when (copySource) {
+            is CopySource.FromAssetPath -> {
+                context.assets.open(copySource.databaseFilePath)
             }
-            is CopyFromFile -> {
-                FileInputStream(copyConfig.file)
+            is CopySource.FromFile -> {
+                FileInputStream(copySource.databaseFile)
             }
-            is CopyFromInputStream -> {
-                copyConfig.callable.call()
+            is CopySource.FromInputStream -> {
+                copySource.callable.call()
             }
         }
 
@@ -192,20 +206,18 @@ class SQLiteCopyOpenHelper(
     }
 
     /**
-     * Implementation of {@link SupportSQLiteOpenHelper.Factory} that creates
-     * {@link SQLiteCopyOpenHelper}.
+     * Implementation of [SupportSQLiteOpenHelper.Factory] that creates [SQLiteCopyOpenHelper].
      */
     class Factory(
-        private val context: Context,
         private val copyConfig: CopyConfig,
-        private val delegate: SupportSQLiteOpenHelper.Factory
+        private val delegate: SupportSQLiteOpenHelper.Factory,
     ) : SupportSQLiteOpenHelper.Factory {
         override fun create(config: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper {
             return SQLiteCopyOpenHelper(
-                context,
+                config.context,
                 copyConfig,
                 config.callback.version,
-                delegate.create(config)
+                delegate.create(config),
             )
         }
     }
@@ -214,8 +226,3 @@ class SQLiteCopyOpenHelper(
         private const val TAG = "SQLiteCopyOpenHelper"
     }
 }
-
-sealed class CopyConfig
-data class CopyFromAssetPath(val path: String): CopyConfig()
-data class CopyFromFile(val file: File): CopyConfig()
-data class CopyFromInputStream(val callable: Callable<InputStream>): CopyConfig()

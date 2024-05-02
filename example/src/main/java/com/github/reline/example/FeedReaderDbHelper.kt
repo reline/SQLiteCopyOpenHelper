@@ -5,7 +5,8 @@ import android.provider.BaseColumns
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
-import com.github.reline.sqlite.db.CopyFromAssetPath
+import com.github.reline.sqlite.db.CopyConfig
+import com.github.reline.sqlite.db.CopySource
 import com.github.reline.sqlite.db.SQLiteCopyOpenHelper
 import net.sqlcipher.database.SupportFactory
 
@@ -58,10 +59,9 @@ fun provideCipherFactory(): SupportFactory {
     return SupportFactory("password".toByteArray())
 }
 
-fun provideCopyFactory(context: Context, factory: SupportSQLiteOpenHelper.Factory): SQLiteCopyOpenHelper.Factory {
+fun provideCopyFactory(factory: SupportSQLiteOpenHelper.Factory): SQLiteCopyOpenHelper.Factory {
     return SQLiteCopyOpenHelper.Factory(
-        context,
-        CopyFromAssetPath("FeedReader.db"),
+        CopyConfig(CopySource.FromAssetPath("FeedReader.db")),
         factory
     )
 }
