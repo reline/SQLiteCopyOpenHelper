@@ -44,9 +44,10 @@ class SQLiteCopyOpenHelperTest {
             .readableDatabase.use { db ->
                 assertEquals(1, db.version)
                 db.beginTransaction()
-                val cursor = db.query("""SELECT value FROM Test LIMIT 1""")
-                cursor.moveToFirst()
-                val value = cursor.getInt(0)
+                val value = db.query("""SELECT value FROM Test LIMIT 1""").use { cursor ->
+                    cursor.moveToFirst()
+                    cursor.getInt(0)
+                }
                 assertEquals(1, value)
                 db.endTransaction()
             }
@@ -56,9 +57,10 @@ class SQLiteCopyOpenHelperTest {
             .readableDatabase.use { db ->
                 assertEquals(2, db.version)
                 db.beginTransaction()
-                val cursor = db.query("""SELECT value FROM Test LIMIT 1""")
-                cursor.moveToFirst()
-                val value = cursor.getInt(0)
+                val value = db.query("""SELECT value FROM Test LIMIT 1""").use { cursor ->
+                    cursor.moveToFirst()
+                    cursor.getInt(0)
+                }
                 assertEquals(2, value)
                 db.endTransaction()
             }
