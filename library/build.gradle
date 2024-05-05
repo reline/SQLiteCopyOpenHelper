@@ -4,7 +4,7 @@ plugins {
     id "maven-publish"
 }
 
-version = "0.1.1-alpha"
+version = "0.1.1-alpha02"
 
 publishing {
     publications {
