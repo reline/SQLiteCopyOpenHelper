@@ -36,7 +36,7 @@ class FeedDao(private val helper: SupportSQLiteOpenHelper) {
             put(FeedReaderContract.FeedEntry.COLUMN_NAME_TITLE, title)
             put(FeedReaderContract.FeedEntry.COLUMN_NAME_SUBTITLE, subtitle)
         }
-        // Insert the new row, returning the primary key value of the new row
-        val newRowId = db.insert(FeedReaderContract.FeedEntry.TABLE_NAME, SQLiteDatabase.CONFLICT_FAIL, values)
+        // Insert the new row
+        db.insert(FeedReaderContract.FeedEntry.TABLE_NAME, SQLiteDatabase.CONFLICT_FAIL, values)
     }
 }

@@ -18,7 +18,7 @@ class MainActivity : AppCompatActivity() {
         dao = provideDao(database)
     }
 
-    fun onButtonClicked(v: View) {
+    fun onButtonClicked(@Suppress("UNUSED_PARAMETER") v: View) {
         dao.insertEntry("title", "subtitle")
     }
 }
