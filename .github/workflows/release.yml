@@ -24,13 +24,13 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
 
-      - name: Build with Gradle
-        run: ./gradlew build publish
+      - name: Publish
+        run: ./gradlew build publishAndReleaseToMavenCentral --no-configuration-cache
 
       - name: Get Release Version
         shell: bash
         run: |
-          version=$(./gradlew --no-daemon -q :library:properties --property version | grep "^version:" | awk '{printf $2}')
+          version=$(./gradlew --no-daemon -q :sqlitecopyopenhelper:properties --property version | grep "^version:" | awk '{printf $2}')
           echo "RELEASE_VERSION=$version" >> $GITHUB_ENV
 
       - name: Create Release
