@@ -40,5 +40,5 @@ dependencies {
     implementation libs.androidx.sqlite
     implementation libs.androidx.sqlite.framework
     implementation libs.sqlcipher
-    implementation project(':library')
+    implementation project(':sqlitecopyopenhelper')
 }
