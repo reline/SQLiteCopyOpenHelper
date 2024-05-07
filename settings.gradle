@@ -17,5 +17,6 @@ dependencyResolutionManagement {
 }
 
 include ':library'
+project(":library").name = "sqlitecopyopenhelper"
 include ':example'
 rootProject.name = "SQLiteCopyOpenHelper"
