@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.reline.sqlite.db
+package io.github.reline.sqlite.db
 
 import java.io.File
 import java.io.InputStream

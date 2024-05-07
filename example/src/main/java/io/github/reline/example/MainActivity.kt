@@ -1,8 +1,9 @@
-package com.github.reline.example
+package io.github.reline.example
 
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import io.github.reline.example.R
 
 data class Entry(val id: Long, val title: String, val subtitle: String)
 

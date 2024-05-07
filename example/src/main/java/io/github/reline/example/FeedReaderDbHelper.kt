@@ -1,13 +1,14 @@
-package com.github.reline.example
+package io.github.reline.example
 
 import android.content.Context
 import android.provider.BaseColumns
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
-import com.github.reline.sqlite.db.CopyConfig
-import com.github.reline.sqlite.db.CopySource
-import com.github.reline.sqlite.db.SQLiteCopyOpenHelper
+import io.github.reline.example.BuildConfig
+import io.github.reline.sqlite.db.CopyConfig
+import io.github.reline.sqlite.db.CopySource
+import io.github.reline.sqlite.db.SQLiteCopyOpenHelper
 import net.sqlcipher.database.SupportFactory
 
 object FeedReaderContract {

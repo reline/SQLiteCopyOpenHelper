@@ -1,4 +1,4 @@
-package com.github.reline.sqlite.db
+package io.github.reline.sqlite.db
 
 import android.content.Context
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -7,10 +7,9 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.sqlite.db.transaction
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.junit.Assert.assertEquals
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
@@ -29,7 +28,10 @@ class SQLiteCopyOpenHelperTest {
             .callback(TestCallback(1))
             .name("database.sqlite")
             .build()
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite")), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite")),
+            FrameworkSQLiteOpenHelperFactory()
+        )
             .create(config)
             .writableDatabase
             .close()
@@ -40,20 +42,26 @@ class SQLiteCopyOpenHelperTest {
         val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
             .name("database.sqlite")
 
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("1.sqlite")), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(CopySource.FromAssetPath("1.sqlite")),
+            FrameworkSQLiteOpenHelperFactory()
+        )
             .create(configBuilder.callback(TestCallback(1)).build())
             .readableDatabase.use { db ->
-                assertEquals(1, db.version)
+                Assert.assertEquals(1, db.version)
                 val value = db.getValue()
-                assertEquals(1, value)
+                Assert.assertEquals(1, value)
             }
 
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("2.sqlite")), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(CopySource.FromAssetPath("2.sqlite")),
+            FrameworkSQLiteOpenHelperFactory()
+        )
             .create(configBuilder.callback(TestCallback(2)).build())
             .readableDatabase.use { db ->
-                assertEquals(2, db.version)
+                Assert.assertEquals(2, db.version)
                 val value = db.getValue()
-                assertEquals(2, value)
+                Assert.assertEquals(2, value)
             }
     }
 
@@ -62,20 +70,30 @@ class SQLiteCopyOpenHelperTest {
         val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
             .name("database.sqlite")
 
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("1.sqlite"), MigrationStrategy.Required), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(
+                CopySource.FromAssetPath("1.sqlite"),
+                MigrationStrategy.Required
+            ), FrameworkSQLiteOpenHelperFactory()
+        )
             .create(configBuilder.callback(TestCallback(1)).build())
             .readableDatabase.use { db ->
-                assertEquals(1, db.version)
+                Assert.assertEquals(1, db.version)
                 val value = db.getValue()
-                assertEquals(1, value)
+                Assert.assertEquals(1, value)
             }
 
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("2.sqlite"), MigrationStrategy.Required), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(
+                CopySource.FromAssetPath("2.sqlite"),
+                MigrationStrategy.Required
+            ), FrameworkSQLiteOpenHelperFactory()
+        )
             .create(configBuilder.callback(TestCallback(2)).build())
             .readableDatabase.use { db ->
-                assertEquals(2, db.version)
+                Assert.assertEquals(2, db.version)
                 val value = db.getValue()
-                assertEquals(1, value)
+                Assert.assertEquals(1, value)
             }
 
         val callback = object : TestCallback(3) {
@@ -85,13 +103,16 @@ class SQLiteCopyOpenHelperTest {
                 }
             }
         }
-        val copyConfig = CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"), MigrationStrategy.Required)
+        val copyConfig = CopyConfig(
+            CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"),
+            MigrationStrategy.Required
+        )
         SQLiteCopyOpenHelper.Factory(copyConfig, FrameworkSQLiteOpenHelperFactory())
             .create(configBuilder.callback(callback).build())
             .readableDatabase.use { db ->
-                assertEquals(3, db.version)
+                Assert.assertEquals(3, db.version)
                 val value = db.getValue()
-                assertEquals(3, value)
+                Assert.assertEquals(3, value)
             }
     }
 
@@ -100,20 +121,30 @@ class SQLiteCopyOpenHelperTest {
         val configBuilder = SupportSQLiteOpenHelper.Configuration.builder(context)
             .name("database.sqlite")
 
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("2.sqlite"), MigrationStrategy.DestructiveOnDowngrade), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(
+                CopySource.FromAssetPath("2.sqlite"),
+                MigrationStrategy.DestructiveOnDowngrade
+            ), FrameworkSQLiteOpenHelperFactory()
+        )
             .create(configBuilder.callback(TestCallback(2)).build())
             .readableDatabase.use { db ->
-                assertEquals(2, db.version)
+                Assert.assertEquals(2, db.version)
                 val value = db.getValue()
-                assertEquals(2, value)
+                Assert.assertEquals(2, value)
             }
 
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("1.sqlite"), MigrationStrategy.DestructiveOnDowngrade), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(
+                CopySource.FromAssetPath("1.sqlite"),
+                MigrationStrategy.DestructiveOnDowngrade
+            ), FrameworkSQLiteOpenHelperFactory()
+        )
             .create(configBuilder.callback(TestCallback(1)).build())
             .readableDatabase.use { db ->
-                assertEquals(1, db.version)
+                Assert.assertEquals(1, db.version)
                 val value = db.getValue()
-                assertEquals(1, value)
+                Assert.assertEquals(1, value)
             }
 
         val callback = object : TestCallback(3) {
@@ -123,13 +154,16 @@ class SQLiteCopyOpenHelperTest {
                 }
             }
         }
-        val copyConfig = CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"), MigrationStrategy.DestructiveOnDowngrade)
+        val copyConfig = CopyConfig(
+            CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"),
+            MigrationStrategy.DestructiveOnDowngrade
+        )
         SQLiteCopyOpenHelper.Factory(copyConfig, FrameworkSQLiteOpenHelperFactory())
             .create(configBuilder.callback(callback).build())
             .readableDatabase.use { db ->
-                assertEquals(3, db.version)
+                Assert.assertEquals(3, db.version)
                 val value = db.getValue()
-                assertEquals(3, value)
+                Assert.assertEquals(3, value)
             }
     }
 
@@ -140,20 +174,30 @@ class SQLiteCopyOpenHelperTest {
 
         val migrationStrategy = MigrationStrategy.DestructiveFrom(setOf(1))
 
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("1.sqlite"), migrationStrategy), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(
+                CopySource.FromAssetPath("1.sqlite"),
+                migrationStrategy
+            ), FrameworkSQLiteOpenHelperFactory()
+        )
             .create(configBuilder.callback(TestCallback(1)).build())
             .readableDatabase.use { db ->
-                assertEquals(1, db.version)
+                Assert.assertEquals(1, db.version)
                 val value = db.getValue()
-                assertEquals(1, value)
+                Assert.assertEquals(1, value)
             }
 
-        SQLiteCopyOpenHelper.Factory(CopyConfig(CopySource.FromAssetPath("2.sqlite"), migrationStrategy), FrameworkSQLiteOpenHelperFactory())
+        SQLiteCopyOpenHelper.Factory(
+            CopyConfig(
+                CopySource.FromAssetPath("2.sqlite"),
+                migrationStrategy
+            ), FrameworkSQLiteOpenHelperFactory()
+        )
             .create(configBuilder.callback(TestCallback(2)).build())
             .readableDatabase.use { db ->
-                assertEquals(2, db.version)
+                Assert.assertEquals(2, db.version)
                 val value = db.getValue()
-                assertEquals(2, value)
+                Assert.assertEquals(2, value)
             }
 
         val callback = object : TestCallback(3) {
@@ -163,13 +207,14 @@ class SQLiteCopyOpenHelperTest {
                 }
             }
         }
-        val copyConfig = CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"), migrationStrategy)
+        val copyConfig =
+            CopyConfig(CopySource.FromAssetPath("EmptyDatabaseFile.sqlite"), migrationStrategy)
         SQLiteCopyOpenHelper.Factory(copyConfig, FrameworkSQLiteOpenHelperFactory())
             .create(configBuilder.callback(callback).build())
             .readableDatabase.use { db ->
-                assertEquals(3, db.version)
+                Assert.assertEquals(3, db.version)
                 val value = db.getValue()
-                assertEquals(3, value)
+                Assert.assertEquals(3, value)
             }
     }
 }

@@ -78,12 +78,12 @@ val database = Database(driver)
 ```groovy
 allprojects {
     repositories {
-        maven { url 'https://jitpack.io' }
+        mavenCentral()
     }
 }
 
 dependencies {
-    implementation 'com.github.reline:sqlitecopyopenhelper:0.1.0'
+    implementation 'io.github.reline:sqlitecopyopenhelper:0.1.0'
 }
 ```
 

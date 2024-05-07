@@ -1,4 +1,4 @@
-package com.github.reline.example
+package io.github.reline.example
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase

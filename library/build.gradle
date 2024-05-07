@@ -4,12 +4,14 @@ plugins {
     id "maven-publish"
 }
 
+group = "io.github.reline"
 version = "0.1.1-alpha03"
+description = "todo"
 
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = "com.github.reline"
+            groupId = group
             artifactId = "sqlitecopyopenhelper"
             version = version
         }
@@ -17,7 +19,7 @@ publishing {
 }
 
 android {
-    namespace "com.github.reline.sqlite.db"
+    namespace "io.github.reline.sqlite.db"
     compileSdk 34
 
     defaultConfig {

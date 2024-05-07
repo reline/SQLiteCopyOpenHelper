@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.reline.sqlite.db
+package io.github.reline.sqlite.db
 
 import android.content.Context
 import android.util.Log
