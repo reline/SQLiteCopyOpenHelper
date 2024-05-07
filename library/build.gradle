@@ -2,20 +2,51 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     id "maven-publish"
+    id "signing"
 }
 
 group = "io.github.reline"
 version = "0.1.1-alpha03"
-description = "todo"
 
 publishing {
     publications {
-        maven(MavenPublication) {
-            groupId = group
+        release(MavenPublication) {
             artifactId = "sqlitecopyopenhelper"
-            version = version
+
+            pom {
+                name = "SQLiteCopyOpenHelper"
+                description = "An open helper for Android that will copy & open a pre-populated database"
+                url = "https://github.com/reline/SQLiteCopyOpenHelper"
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                        distribution = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "reline"
+                        name = "Nathan Reline"
+                        url = "https://github.com/reline/"
+                    }
+                }
+                scm {
+                    url = "https://github.com/reline/SQLiteCopyOpenHelper"
+                    connection = "scm:git:git://github.com/reline/SQLiteCopyOpenHelper.git"
+                    developerConnection = "scm:git:ssh://git@github.com/reline/SQLiteCopyOpenHelper.git"
+                }
+            }
+
+            afterEvaluate {
+                from components.release
+            }
         }
     }
+}
+
+signing {
+    sign publishing.publications.release
 }
 
 android {
