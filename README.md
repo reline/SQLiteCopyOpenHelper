@@ -3,16 +3,16 @@ An open helper for Android that will copy &amp; open a pre-populated database
 
 ## Room
 
-If you are using Room, utilize the built in methods for prepopulating a database.
-https://developer.android.com/training/data-storage/room/prepopulate
+If you are using Room, utilize the [built-in methods for prepopulating a database](https://developer.android.com/training/data-storage/room/prepopulate).
+
 
 ## Usage
 
-Add the Android SQLite framework as a dependency for a default factory implementation.
+Add the [Android SQLite framework](https://developer.android.com/jetpack/androidx/releases/sqlite) as a dependency for a default factory implementation.
 
 ```groovy
 dependencies {
-    implementation "androidx.sqlite:sqlite-framework:$sqlite_version"
+    implementation("androidx.sqlite:sqlite-framework:$sqlite_version")
 }
 ```
 
@@ -28,9 +28,9 @@ Then use the `CopySource.FromAssetPath` configuration to specify the path to you
 ```kotlin
 val source = CopySource.FromAssetPath("database.sqlite")
 val migrationStrategy = ..
-val factory: SupportSQLiteOpenHelper.Factory = SQLiteCopyOpenHelper.Factory(
-        delegate = FrameworkSQLiteOpenHelperFactory(),
-        copyConfig = CopyConfig(source, migrationStrategy),
+val factory = SQLiteCopyOpenHelper.Factory(
+    delegate = FrameworkSQLiteOpenHelperFactory(),
+    copyConfig = CopyConfig(source, migrationStrategy),
 )
 ```
 
@@ -60,30 +60,28 @@ val migrationStrategy = MigrationStrategy.DestructiveFrom(setOf(
 
 ### SQLDelight
 
-The `AndroidSqliteDriver` for SQLDelight accepts a `SupportSQLiteOpenHelper.Factory`, so simply pass
+The `AndroidSqliteDriver` for [SQLDelight](https://github.com/cashapp/sqldelight) accepts a `SupportSQLiteOpenHelper.Factory`, so simply pass
 in a `SQLiteCopyOpenHelper.Factory`.
 ```kotlin
-val factory: SupportSQLiteOpenHelper.Factory = SQLiteCopyOpenHelper.Factory(..)
-val driver: SqlDriver = AndroidSqliteDriver(
-        context = applicationContext,
-        schema = Database.Schema,
-        factory = factory,
-        name = "database.db",
+val driver = AndroidSqliteDriver(
+    context = applicationContext,
+    schema = Database.Schema,
+    factory = SQLiteCopyOpenHelper.Factory(..),
+    name = "database.sqlite",
 )
-val database = Database(driver)
 ```
 
 ## Installation
 
 ```groovy
-allprojects {
+dependencyResolutionManagement {
     repositories {
         mavenCentral()
     }
 }
 
 dependencies {
-    implementation 'io.github.reline:sqlitecopyopenhelper:0.1.0'
+    implementation("io.github.reline:sqlitecopyopenhelper:<version>")
 }
 ```
 
