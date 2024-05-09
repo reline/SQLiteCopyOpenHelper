@@ -35,3 +35,4 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-android-extensions = { id = "org.jetbrains.kotlin.android.extensions", version.ref = "kotlin" }
+gradle-maven-publish = { id = "com.vanniktech.maven.publish", version = "0.28.0" }
