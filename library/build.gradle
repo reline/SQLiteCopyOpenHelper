@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "io.github.reline"
-version = "0.1.1-alpha04"
+version = "0.1.1"
 
 mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
