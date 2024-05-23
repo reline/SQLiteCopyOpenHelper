@@ -43,20 +43,12 @@ class SQLiteCopyOpenHelper(
     private val copyConfig: CopyConfig,
     private val databaseVersion: Int,
     private val delegate: SupportSQLiteOpenHelper,
-) : SupportSQLiteOpenHelper {
+) : SupportSQLiteOpenHelper by delegate {
 
     private var verified = false
 
     private val copySource = copyConfig.copySource
     private val migrationConfiguration = copyConfig.migrationStrategy
-
-    override fun getDatabaseName(): String? {
-        return delegate.databaseName
-    }
-
-    override fun setWriteAheadLoggingEnabled(enabled: Boolean) {
-        delegate.setWriteAheadLoggingEnabled(enabled)
-    }
 
     @Synchronized
     override fun getWritableDatabase(): SupportSQLiteDatabase {
